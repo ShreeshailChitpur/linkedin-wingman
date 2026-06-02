@@ -4,6 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from urllib.parse import unquote
+
+import db
+from fastapi import HTTPException
+
 
 # ------------------------
 # Pydantic Models
@@ -36,7 +41,7 @@ class GenerateResponse(BaseModel):
 # ------------------------
 
 app = FastAPI(
-    title="LinkedIn Messaging Backend",
+    title="LinkedIn Wingman Backend",
     version="0.1.0"
 )
 
@@ -85,10 +90,13 @@ async def generate_message(
 # ------------------------
 
 @app.post("/save-profile")
-async def save_profile(
-    profile: Profile
+async def save_profile_endpoint(
+    profile: Profile,
 ) -> dict[str, str]:
-    return {"status": "not implemented"}
+
+    db.save_profile(profile.model_dump())
+
+    return {"status": "saved"}
 
 
 # ------------------------
@@ -96,7 +104,18 @@ async def save_profile(
 # ------------------------
 
 @app.get("/profile/{linkedin_url:path}")
-async def get_profile(
-    linkedin_url: str
-) -> dict[str, str]:
-    return {"status": "not implemented"}
+async def get_profile_endpoint(
+    linkedin_url: str,
+) -> dict:
+
+    decoded_url = unquote(linkedin_url)
+
+    profile = db.get_profile(decoded_url)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found",
+        )
+
+    return profile
