@@ -9,6 +9,8 @@ from urllib.parse import unquote
 import db
 from fastapi import HTTPException
 
+import template_engine
+
 
 # ------------------------
 # Pydantic Models
@@ -75,14 +77,46 @@ async def health_check() -> dict[str, str]:
 # Generate Draft
 # ------------------------
 
-@app.post("/generate", response_model=GenerateResponse)
+@app.post(
+    "/generate",
+    response_model=GenerateResponse,
+)
 async def generate_message(
-    request: GenerateRequest
+    request: GenerateRequest,
 ) -> GenerateResponse:
-    return GenerateResponse(
-        draft="not implemented",
-        model_used="none"
-    )
+    
+    try:
+
+        template = template_engine.load_template(
+            request.template_key
+        )
+
+        profile = request.profile
+
+        slot_values = {
+            "name": profile.name,
+            "company": profile.current_company,
+            "role": profile.current_role,
+            "their_background": profile.current_role,
+            "focus_area": "C++ and cloud/DevOps",
+        }
+
+        draft = template_engine.fill_slots(
+            template,
+            slot_values,
+        )
+
+        return GenerateResponse(
+            draft=draft,
+            model_used="template",
+            tokens_used=0,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
 
 # ------------------------
@@ -119,3 +153,11 @@ async def get_profile_endpoint(
         )
 
     return profile
+
+# ------------------------
+# Get Templates
+# ------------------------
+
+@app.get("/templates")
+async def get_templates() -> list[str]:
+    return template_engine.list_templates()
