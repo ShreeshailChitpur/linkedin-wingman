@@ -11,6 +11,8 @@ from fastapi import HTTPException
 
 import template_engine
 
+import router
+
 
 # ------------------------
 # Pydantic Models
@@ -106,10 +108,16 @@ async def generate_message(
             slot_values,
         )
 
+        result = router.route_request(
+            mode = request.mode,
+            draft = draft,
+            profile= profile.model_dump(),
+        )
+
         return GenerateResponse(
-            draft=draft,
-            model_used="template",
-            tokens_used=0,
+            draft=result["draft"],
+            model_used=result["model_used"],
+            tokens_used=result["tokens_used"],
         )
 
     except ValueError as e:
