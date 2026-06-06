@@ -3,6 +3,13 @@ from models.local import (
     polish_draft,
 )
 
+from models.gemini import (
+    get_focus_area,
+    is_gemini_configured,
+)
+
+import template_engine
+
 
 def route_request(
     mode: str,
@@ -36,9 +43,53 @@ def route_request(
 
     if mode == "opportunity":
 
+        template = template_engine.load_template(
+            "opportunity"
+        )
+
+        if is_gemini_configured():
+
+            focus_result = get_focus_area(
+                profile["current_company"]
+            )
+
+            filled_draft = (
+                template_engine.fill_slots(
+                    template,
+                    {
+                        "name": profile["name"],
+                        "company": profile["current_company"],
+                        "focus_area": focus_result[
+                            "focus_area"
+                        ],
+                    },
+                )
+            )
+
+            return {
+                "draft": filled_draft,
+                "model_used": "gemini-2.0-flash",
+                "tokens_used": focus_result[
+                    "tokens_used"
+                ],
+            }
+
+        filled_draft = (
+            template_engine.fill_slots(
+                template,
+                {
+                    "name": profile["name"],
+                    "company": profile["current_company"],
+                    "focus_area": (
+                        "C++ and cloud/DevOps"
+                    ),
+                },
+            )
+        )
+
         return {
-            "draft": draft,
-            "model_used": "pending_gemini",
+            "draft": filled_draft,
+            "model_used": "template_only",
             "tokens_used": 0,
         }
 

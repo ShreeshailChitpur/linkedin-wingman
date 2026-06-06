@@ -13,6 +13,8 @@ import template_engine
 
 import router
 
+from models.local import is_ollama_running
+from models.gemini import is_gemini_configured
 
 # ------------------------
 # Pydantic Models
@@ -73,6 +75,26 @@ app.add_middleware(
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "healthy"}
+
+# ------------------------
+# Status Check
+# ------------------------
+
+@app.get("/status")
+async def status() -> dict:
+
+    try:
+        db.list_profiles()
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    return {
+        "ollama": is_ollama_running(),
+        "gemini": is_gemini_configured(),
+        "templates": template_engine.list_templates(),
+        "db": db_ok,
+    }
 
 
 # ------------------------
